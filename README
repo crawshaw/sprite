@@ -1,0 +1,5 @@
+A fork of golang.org/x/mobile/sprite.
+Used to prototype ideas.
+Not terrible ideas will be backported to mobile/sprite.
+
+Under the same license as the go.mobile subrepository.
