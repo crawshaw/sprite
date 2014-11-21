@@ -15,8 +15,9 @@ import (
 
 	"golang.org/x/mobile/f32"
 	"golang.org/x/mobile/geom"
-	"golang.org/x/mobile/sprite"
-	"golang.org/x/mobile/sprite/clock"
+
+	"github.com/crawshaw/sprite"
+	"github.com/crawshaw/sprite/clock"
 )
 
 // Engine builds a sprite Engine that renders onto dst.

@@ -29,7 +29,8 @@ import (
 	"image/draw"
 
 	"golang.org/x/mobile/f32"
-	"golang.org/x/mobile/sprite/clock"
+
+	"github.com/crawshaw/sprite/clock"
 )
 
 type Arranger interface {
