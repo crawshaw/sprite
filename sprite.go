@@ -50,14 +50,7 @@ type SubTex struct {
 }
 
 type Engine interface {
-	Register(n *Node)
-	Unregister(n *Node)
-
 	LoadTexture(a image.Image) (Texture, error)
-
-	SetSubTex(n *Node, x SubTex)
-	SetTransform(n *Node, m f32.Affine) // sets transform relative to parent.
-
 	Render(scene *Node, t clock.Time)
 }
 
@@ -65,15 +58,9 @@ type Engine interface {
 type Node struct {
 	Parent, FirstChild, LastChild, PrevSibling, NextSibling *Node
 
-	Arranger Arranger
-
-	// EngineFields contains fields that should only be accessed by Engine
-	// implementations. It is exported because such implementations can be
-	// in other packages.
-	EngineFields struct {
-		Index  int32
-		SubTex SubTex
-	}
+	Arranger  Arranger
+	Transform *f32.Affine
+	SubTex    SubTex
 }
 
 // AppendChild adds a node c as a child of n.

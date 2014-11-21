@@ -23,14 +23,8 @@ import (
 // Engine builds a sprite Engine that renders onto dst.
 func Engine(dst *image.RGBA) sprite.Engine {
 	return &engine{
-		dst:   dst,
-		nodes: []*node{nil},
+		dst: dst,
 	}
-}
-
-type node struct {
-	// TODO: move this into package sprite as Node.EngineFields.RelTransform??
-	relTransform f32.Affine
 }
 
 type texture struct {
@@ -54,24 +48,7 @@ func (t *texture) Unload() { panic("TODO") }
 
 type engine struct {
 	dst           *image.RGBA
-	nodes         []*node
 	absTransforms []f32.Affine
-}
-
-func (e *engine) Register(n *sprite.Node) {
-	if n.EngineFields.Index != 0 {
-		panic("portable: sprite.Node already registered")
-	}
-
-	o := &node{}
-	o.relTransform.Identity()
-
-	e.nodes = append(e.nodes, o)
-	n.EngineFields.Index = int32(len(e.nodes) - 1)
-}
-
-func (e *engine) Unregister(n *sprite.Node) {
-	panic("todo")
 }
 
 func (e *engine) LoadTexture(m image.Image) (sprite.Texture, error) {
@@ -81,14 +58,6 @@ func (e *engine) LoadTexture(m image.Image) (sprite.Texture, error) {
 	t := &texture{m: image.NewRGBA(image.Rect(0, 0, w, h))}
 	t.Upload(b, m)
 	return t, nil
-}
-
-func (e *engine) SetSubTex(n *sprite.Node, x sprite.SubTex) {
-	n.EngineFields.SubTex = x
-}
-
-func (e *engine) SetTransform(n *sprite.Node, m f32.Affine) {
-	e.nodes[n.EngineFields.Index].relTransform = m
 }
 
 func (e *engine) Render(scene *sprite.Node, t clock.Time) {
@@ -103,20 +72,18 @@ func (e *engine) Render(scene *sprite.Node, t clock.Time) {
 }
 
 func (e *engine) render(n *sprite.Node, t clock.Time) {
-	if n.EngineFields.Index == 0 {
-		panic("portable: sprite.Node not registered")
-	}
 	if n.Arranger != nil {
 		n.Arranger.Arrange(e, n, t)
 	}
 
 	// Push absTransforms.
-	rel := &e.nodes[n.EngineFields.Index].relTransform
-	m := f32.Affine{}
-	m.Mul(&e.absTransforms[len(e.absTransforms)-1], rel)
-	e.absTransforms = append(e.absTransforms, m)
+	m := e.absTransforms[len(e.absTransforms)-1]
+	if n.Transform != nil {
+		m.Mul(&m, n.Transform)
+		e.absTransforms = append(e.absTransforms, m)
+	}
 
-	if x := n.EngineFields.SubTex; x.T != nil {
+	if x := n.SubTex; x.T != nil {
 		// Affine transforms work in geom.Pt, which is entirely
 		// independent of the number of pixels in a texture. A texture
 		// of any image.Rectangle bounds rendered with
@@ -139,6 +106,7 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 		e.render(c, t)
 	}
 
-	// Pop absTransforms.
-	e.absTransforms = e.absTransforms[:len(e.absTransforms)-1]
+	if n.Transform != nil {
+		e.absTransforms = e.absTransforms[:len(e.absTransforms)-1]
+	}
 }

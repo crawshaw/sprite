@@ -62,46 +62,41 @@ func draw() {
 func touch(t event.Touch) {
 }
 
-func newNode() *sprite.Node {
-	n := &sprite.Node{}
-	eng.Register(n)
-	scene.AppendChild(n)
-	return n
-}
-
 func loadScene() {
 	texs := loadTextures()
-	scene = &sprite.Node{}
-	eng.Register(scene)
-	eng.SetTransform(scene, f32.Affine{
-		{1, 0, 0},
-		{0, 1, 0},
-	})
+	scene = &sprite.Node{
+		Transform: &f32.Affine{
+			{1, 0, 0},
+			{0, 1, 0},
+		},
+	}
 
-	var n *sprite.Node
+	n := &sprite.Node{
+		SubTex: texs[texBooks],
+		Transform: &f32.Affine{
+			{36, 0, 0},
+			{0, 36, 0},
+		},
+	}
+	scene.AppendChild(n)
 
-	n = newNode()
-	eng.SetSubTex(n, texs[texBooks])
-	eng.SetTransform(n, f32.Affine{
-		{36, 0, 0},
-		{0, 36, 0},
-	})
+	n = &sprite.Node{
+		SubTex: texs[texFire],
+		Transform: &f32.Affine{
+			{72, 0, 144},
+			{0, 72, 144},
+		},
+	}
+	scene.AppendChild(n)
 
-	n = newNode()
-	eng.SetSubTex(n, texs[texFire])
-	eng.SetTransform(n, f32.Affine{
-		{72, 0, 144},
-		{0, 72, 144},
-	})
-
-	n = newNode()
+	n = &sprite.Node{}
 	n.Arranger = arrangerFunc(func(eng sprite.Engine, n *sprite.Node, t clock.Time) {
 		// TODO: use a tweening library instead of manually arranging.
 		t0 := uint32(t) % 120
 		if t0 < 60 {
-			eng.SetSubTex(n, texs[texGopherR])
+			n.SubTex = texs[texGopherR]
 		} else {
-			eng.SetSubTex(n, texs[texGopherL])
+			n.SubTex = texs[texGopherL]
 		}
 
 		u := float32(t0) / 120
@@ -111,11 +106,12 @@ func loadScene() {
 		ty := 36 + u*108
 		sx := 36 + u*36
 		sy := 36 + u*36
-		eng.SetTransform(n, f32.Affine{
+		n.Transform = &f32.Affine{
 			{sx, 0, tx},
 			{0, sy, ty},
-		})
+		}
 	})
+	scene.AppendChild(n)
 }
 
 const (

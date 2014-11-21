@@ -17,11 +17,6 @@ import (
 	"github.com/crawshaw/sprite/clock"
 )
 
-type node struct {
-	// TODO: move this into package sprite as Node.EngineFields.RelTransform??
-	relTransform f32.Affine
-}
-
 type texture struct {
 	glImage *glutil.Image
 	b       image.Rectangle
@@ -43,31 +38,13 @@ func (t *texture) Unload() {
 }
 
 func Engine() sprite.Engine {
-	return &engine{
-		nodes: []*node{nil},
-	}
+	return &engine{}
 }
 
 type engine struct {
 	glImages map[sprite.Texture]*glutil.Image
-	nodes    []*node
 
 	absTransforms []f32.Affine
-}
-
-func (e *engine) Register(n *sprite.Node) {
-	if n.EngineFields.Index != 0 {
-		panic("glsprite: sprite.Node already registered")
-	}
-	o := &node{}
-	o.relTransform.Identity()
-
-	e.nodes = append(e.nodes, o)
-	n.EngineFields.Index = int32(len(e.nodes) - 1)
-}
-
-func (e *engine) Unregister(n *sprite.Node) {
-	panic("todo")
 }
 
 func (e *engine) LoadTexture(src image.Image) (sprite.Texture, error) {
@@ -76,16 +53,6 @@ func (e *engine) LoadTexture(src image.Image) (sprite.Texture, error) {
 	t.Upload(b, src)
 	// TODO: set "glImage.Pix = nil"?? We don't need the CPU-side image any more.
 	return t, nil
-}
-
-func (e *engine) SetSubTex(n *sprite.Node, x sprite.SubTex) {
-	n.EngineFields.Dirty = true // TODO: do we need to propagate dirtiness up/down the tree?
-	n.EngineFields.SubTex = x
-}
-
-func (e *engine) SetTransform(n *sprite.Node, m f32.Affine) {
-	n.EngineFields.Dirty = true // TODO: do we need to propagate dirtiness up/down the tree?
-	e.nodes[n.EngineFields.Index].relTransform = m
 }
 
 func (e *engine) Render(scene *sprite.Node, t clock.Time) {
@@ -97,21 +64,18 @@ func (e *engine) Render(scene *sprite.Node, t clock.Time) {
 }
 
 func (e *engine) render(n *sprite.Node, t clock.Time) {
-	if n.EngineFields.Index == 0 {
-		panic("glsprite: sprite.Node not registered")
-	}
 	if n.Arranger != nil {
 		n.Arranger.Arrange(e, n, t)
 	}
 
 	// Push absTransforms.
-	// TODO: cache absolute transforms and use EngineFields.Dirty?
-	rel := &e.nodes[n.EngineFields.Index].relTransform
-	m := f32.Affine{}
-	m.Mul(&e.absTransforms[len(e.absTransforms)-1], rel)
-	e.absTransforms = append(e.absTransforms, m)
+	m := e.absTransforms[len(e.absTransforms)-1]
+	if n.Transform != nil {
+		m.Mul(&m, n.Transform)
+		e.absTransforms = append(e.absTransforms, m)
+	}
 
-	if x := n.EngineFields.SubTex; x.T != nil {
+	if x := n.SubTex; x.T != nil {
 		x.T.(*texture).glImage.Draw(
 			geom.Point{
 				geom.Pt(m[0][2]),
@@ -133,6 +97,8 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 		e.render(c, t)
 	}
 
-	// Pop absTransforms.
-	e.absTransforms = e.absTransforms[:len(e.absTransforms)-1]
+	if n.Transform != nil {
+		e.absTransforms = e.absTransforms[:len(e.absTransforms)-1]
+	}
+
 }
