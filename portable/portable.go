@@ -84,12 +84,10 @@ func (e *engine) LoadTexture(m image.Image) (sprite.Texture, error) {
 }
 
 func (e *engine) SetSubTex(n *sprite.Node, x sprite.SubTex) {
-	n.EngineFields.Dirty = true // TODO: do we need to propagate dirtiness up/down the tree?
 	n.EngineFields.SubTex = x
 }
 
 func (e *engine) SetTransform(n *sprite.Node, m f32.Affine) {
-	n.EngineFields.Dirty = true // TODO: do we need to propagate dirtiness up/down the tree?
 	e.nodes[n.EngineFields.Index].relTransform = m
 }
 
@@ -113,7 +111,6 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 	}
 
 	// Push absTransforms.
-	// TODO: cache absolute transforms and use EngineFields.Dirty?
 	rel := &e.nodes[n.EngineFields.Index].relTransform
 	m := f32.Affine{}
 	m.Mul(&e.absTransforms[len(e.absTransforms)-1], rel)

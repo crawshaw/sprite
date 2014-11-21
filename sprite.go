@@ -71,8 +71,6 @@ type Node struct {
 	// implementations. It is exported because such implementations can be
 	// in other packages.
 	EngineFields struct {
-		// TODO: separate TexDirty and TransformDirty bits?
-		Dirty  bool
 		Index  int32
 		SubTex SubTex
 	}
