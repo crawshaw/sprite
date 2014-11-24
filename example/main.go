@@ -17,11 +17,13 @@ import (
 	"golang.org/x/mobile/app/debug"
 	"golang.org/x/mobile/event"
 	"golang.org/x/mobile/f32"
+	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/gl"
 
 	"github.com/crawshaw/sprite"
 	"github.com/crawshaw/sprite/clock"
 	"github.com/crawshaw/sprite/glsprite"
+	"github.com/crawshaw/sprite/raster"
 )
 
 var (
@@ -53,6 +55,8 @@ func draw() {
 	}
 	lastClock = now
 
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.Enable(gl.BLEND)
 	gl.ClearColor(1, 1, 1, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	eng.Render(scene, now)
@@ -112,6 +116,24 @@ func loadScene() {
 		}
 	})
 	scene.AppendChild(n)
+
+	p := new(raster.Path)
+	p.AddStart(geom.Point{0, 0})
+	p.AddLine(geom.Point{96, 96})
+	n = &sprite.Node{
+		Transform: &f32.Affine{
+			{72, 0, 96},
+			{0, 72, 32},
+		},
+		Drawable: &raster.Drawable{
+			Shape: &raster.Stroke{
+				Shape: p,
+				Width: 10,
+			},
+		},
+	}
+	scene.AppendChild(n)
+
 }
 
 const (
