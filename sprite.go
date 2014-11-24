@@ -31,6 +31,7 @@ import (
 	"golang.org/x/mobile/f32"
 
 	"github.com/crawshaw/sprite/clock"
+	"github.com/crawshaw/sprite/raster"
 )
 
 type Arranger interface {
@@ -54,6 +55,9 @@ type Engine interface {
 	Render(scene *Node, t clock.Time)
 }
 
+// TODO: 64-bit sizeof(Node): 8*7 + 8*2 + 8*2 + 4*4 = 104 bytes.
+// is that a lot? a 100k empty node scene consumes 10MB. that's pushing it.
+
 // A Node is a renderable element and forms a tree of Nodes.
 type Node struct {
 	Parent, FirstChild, LastChild, PrevSibling, NextSibling *Node
@@ -61,6 +65,7 @@ type Node struct {
 	Arranger  Arranger
 	Transform *f32.Affine
 	SubTex    SubTex
+	Drawable  *raster.Drawable
 }
 
 // AppendChild adds a node c as a child of n.

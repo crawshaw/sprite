@@ -15,6 +15,7 @@ import (
 
 	"github.com/crawshaw/sprite"
 	"github.com/crawshaw/sprite/clock"
+	"github.com/crawshaw/sprite/raster"
 )
 
 type texture struct {
@@ -42,8 +43,7 @@ func Engine() sprite.Engine {
 }
 
 type engine struct {
-	glImages map[sprite.Texture]*glutil.Image
-
+	raster        *glutil.Image
 	absTransforms []f32.Affine
 }
 
@@ -90,6 +90,39 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 				geom.Pt(m[1][2] + m[1][1]),
 			},
 			x.R,
+		)
+	}
+
+	if n.Drawable != nil {
+		if e.raster == nil {
+			w := int(geom.Width.Px() + 0.5)
+			h := int(geom.Height.Px() + 0.5)
+			e.raster = glutil.NewImage(w, h)
+		}
+		w := int(geom.Pt(m[0][0]).Px() + 0.5)
+		h := int(geom.Pt(m[1][1]).Px() + 0.5)
+		b := image.Rect(0, 0, w, h)
+		scratch := e.raster.RGBA.SubImage(b).(*image.RGBA)
+		clear := scratch.Pix[0:scratch.PixOffset(w, h)]
+		for i := range clear {
+			clear[i] = 0
+		}
+		raster.Draw(scratch, n.Drawable)
+		e.raster.Upload()
+		e.raster.Draw(
+			geom.Point{
+				geom.Pt(m[0][2]),
+				geom.Pt(m[1][2]),
+			},
+			geom.Point{
+				geom.Pt(m[0][2] + m[0][0]),
+				geom.Pt(m[1][2] + m[1][0]),
+			},
+			geom.Point{
+				geom.Pt(m[0][2] + m[0][1]),
+				geom.Pt(m[1][2] + m[1][1]),
+			},
+			b,
 		)
 	}
 
