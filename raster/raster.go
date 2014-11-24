@@ -168,30 +168,17 @@ func (s *Stroke) Path() Path {
 	return fixToPath(dst)
 }
 
+// TODO
 type Circle struct {
 	Center geom.Point
 	Radius geom.Pt
 }
 
+// TODO
 type Ellipse struct {
 	Center geom.Point
 	Radius geom.Point
 }
-
-type Cap int8
-
-const (
-	ButtCap Cap = iota
-	RoundCap
-	SquareCap
-)
-
-type Join int8
-
-const (
-	Bevel Join = iota
-	Round
-)
 
 type Drawable struct {
 	Shape Shape
