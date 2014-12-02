@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 
 	ftraster "code.google.com/p/freetype-go/freetype/raster"
 	"golang.org/x/mobile/geom"
@@ -45,11 +46,11 @@ type Shape interface {
 }
 
 func ptToFix32(p geom.Pt) ftraster.Fix32 {
-	return ftraster.Fix32(float32(p) / geom.PixelsPerPt * 255)
+	return ftraster.Fix32(float32(p) * geom.PixelsPerPt * 255)
 }
 
 func fix32ToPt(p ftraster.Fix32) geom.Pt {
-	return geom.Pt(geom.PixelsPerPt * (float32(p>>8) + float32(p&0xff)/0xff))
+	return geom.Pt((float32(p>>8) + float32(p&0xff)/0xff) / geom.PixelsPerPt)
 }
 
 func pathToFix(dst ftraster.Adder, src Path) {
@@ -168,10 +169,81 @@ func (s *Stroke) Path() Path {
 	return fixToPath(dst)
 }
 
-// TODO
 type Circle struct {
 	Center geom.Point
 	Radius geom.Pt
+}
+
+func (c *Circle) Contains(p geom.Point) bool {
+	x := p.X - c.Center.X
+	y := p.Y - c.Center.Y
+	return x*x+y*y < c.Radius*c.Radius
+}
+
+func (c *Circle) Path() (p Path) {
+	// No, you cannot draw a circle with Bezier curves.
+	// But you can do a pretty good approximation.
+	//
+	// One quadratic bezier for each 45 degree arc.
+	// Eight in total for a circle with the endpoints:
+	//
+	//	     N
+	//	  NW   NE
+	//	W         E
+	//	  SW   SE
+	//	     S
+	//
+	// The cartesian offset of the intercardinal control points
+	// is x1 where
+	//
+	//	cos(Pi/4) = x1 / radius
+	//
+	// The middle control points of each quadratic bezier arc
+	// is the intersection of the tangents of the end points. One
+	// end point is always a cardinal direction, the other is an
+	// intercardinal. The cartesian offset from the cardinal is x2
+	// where
+	//
+	//	tan(Pi/8) = x2 / radius.
+	x1 := geom.Pt(math.Cos(math.Pi/4)) * c.Radius
+	x2 := geom.Pt(math.Tan(math.Pi/8)) * c.Radius
+
+	p.AddStart(
+		geom.Point{c.Center.X, c.Center.Y - c.Radius}, // N
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X + x2, c.Center.Y - c.Radius}, // N-NE
+		geom.Point{c.Center.X + x1, c.Center.Y - x1},       // NE
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X + c.Radius, c.Center.Y - x2}, // NE-E
+		geom.Point{c.Center.X + c.Radius, c.Center.Y},      // E
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X + c.Radius, c.Center.Y + x2}, // E-SE
+		geom.Point{c.Center.X + x1, c.Center.Y + x1},       // SE
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X + x2, c.Center.Y + c.Radius}, // SE-S
+		geom.Point{c.Center.X, c.Center.Y + c.Radius},      // S
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X - x2, c.Center.Y + c.Radius}, // S-SW
+		geom.Point{c.Center.X - x1, c.Center.Y + x1},       // SW
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X - c.Radius, c.Center.Y + x2}, // SW-W
+		geom.Point{c.Center.X - c.Radius, c.Center.Y},      // W
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X - c.Radius, c.Center.Y - x2}, // W-NW
+		geom.Point{c.Center.X - x1, c.Center.Y - x1},       // NW
+	)
+	p.AddQuadratic(
+		geom.Point{c.Center.X - x2, c.Center.Y - c.Radius}, // NW-N
+		geom.Point{c.Center.X, c.Center.Y - c.Radius},      // N
+	)
+	return p
 }
 
 // TODO
@@ -191,6 +263,7 @@ func Draw(dst *image.RGBA, d *Drawable) {
 	p.SetColor(color.RGBA{0xff, 0, 0, 0xff})
 	b := dst.Bounds()
 	r := ftraster.NewRasterizer(b.Dx(), b.Dy())
+	r.UseNonZeroWinding = true
 
 	pathToFix(r, d.Shape.Path())
 	r.Rasterize(p)
