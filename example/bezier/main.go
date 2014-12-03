@@ -13,7 +13,6 @@ import (
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/app/debug"
 	"golang.org/x/mobile/event"
-	"golang.org/x/mobile/f32"
 	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/gl"
 
@@ -92,14 +91,8 @@ func touch(t event.Touch) {
 
 func loadScene() {
 	scene = &sprite.Node{}
-	wholeScreen := &f32.Affine{
-		{float32(geom.Width), 0, 0},
-		{0, float32(geom.Height), 0},
-	}
-
 	addCircle := func(c *raster.Circle) {
 		n := &sprite.Node{
-			Transform: wholeScreen,
 			Drawable: &raster.Drawable{
 				Shape: &raster.Stroke{
 					Shape: c,
@@ -129,7 +122,6 @@ func loadScene() {
 
 	curve = new(quadraticBezier)
 	n := &sprite.Node{
-		Transform: wholeScreen,
 		Drawable: &raster.Drawable{
 			Shape: &raster.Stroke{
 				Shape: curve,

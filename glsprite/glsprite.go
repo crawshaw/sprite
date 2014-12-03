@@ -94,6 +94,14 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 	}
 
 	if n.Drawable != nil {
+		if n.Transform == nil {
+			// Give ourselves the space of the screen for drawing.
+			// TODO: use smaller bounding box.
+			m.Mul(&m, &f32.Affine{
+				{float32(geom.Width), 0, 0},
+				{0, float32(geom.Height), 0},
+			})
+		}
 		if e.raster == nil {
 			w := int(geom.Width.Px() + 0.5)
 			h := int(geom.Height.Px() + 0.5)

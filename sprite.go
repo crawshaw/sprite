@@ -62,10 +62,17 @@ type Engine interface {
 type Node struct {
 	Parent, FirstChild, LastChild, PrevSibling, NextSibling *Node
 
-	Arranger  Arranger
+	// Transform is an affine transformation matrix for this
+	// node and its children.
+	//
+	// If Transform is nil then no extra transformation is applied
+	// to SubTex, and a transform representing the screen is
+	// applied to Drawable.
 	Transform *f32.Affine
-	SubTex    SubTex
-	Drawable  *raster.Drawable
+
+	Arranger Arranger
+	SubTex   SubTex
+	Drawable *raster.Drawable
 }
 
 // AppendChild adds a node c as a child of n.
