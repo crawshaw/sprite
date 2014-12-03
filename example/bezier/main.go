@@ -5,8 +5,11 @@
 package main
 
 import (
+	"image/color"
+	"log"
 	"time"
 
+	"golang.org/x/junk/msprite/clock"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/app/debug"
 	"golang.org/x/mobile/event"
@@ -20,7 +23,9 @@ import (
 )
 
 var (
-	start = time.Now()
+	start     = time.Now()
+	lastClock = clock.Time(-1)
+
 	eng   = glsprite.Engine()
 	scene *sprite.Node
 
@@ -40,6 +45,18 @@ func draw() {
 	if scene == nil {
 		loadScene()
 	}
+
+	now := clock.Time(time.Since(start) * 60 / time.Second)
+	if now == lastClock {
+		// TODO: figure out how to limit draw callbacks to 60Hz instead of
+		// burning the CPU as fast as possible.
+		// TODO: (relatedly??) sync to vblank?
+		return
+	}
+	if last := time.Duration(now-lastClock) * time.Second / 60; last > 20*time.Millisecond {
+		log.Printf("last = %v", last)
+	}
+	lastClock = now
 
 	curve.n0 = c0.Center
 	curve.n1 = c1.Center
@@ -84,10 +101,11 @@ func loadScene() {
 		n := &sprite.Node{
 			Transform: wholeScreen,
 			Drawable: &raster.Drawable{
-				&raster.Stroke{
+				Shape: &raster.Stroke{
 					Shape: c,
 					Width: .5,
 				},
+				Color: color.RGBA{R: 0xff, A: 0xff},
 			},
 		}
 		scene.AppendChild(n)
@@ -113,10 +131,11 @@ func loadScene() {
 	n := &sprite.Node{
 		Transform: wholeScreen,
 		Drawable: &raster.Drawable{
-			&raster.Stroke{
+			Shape: &raster.Stroke{
 				Shape: curve,
 				Width: .7,
 			},
+			Color: color.Black,
 		},
 	}
 	scene.AppendChild(n)

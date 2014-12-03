@@ -254,13 +254,13 @@ type Ellipse struct {
 
 type Drawable struct {
 	Shape Shape
-	// TODO color? mask? so many things.
+	Color color.Color // TODO mask? so many possibilities
 }
 
 // Draw is a portable implementation of vector rasterization.
 func Draw(dst *image.RGBA, d *Drawable) {
 	p := ftraster.NewRGBAPainter(dst)
-	p.SetColor(color.RGBA{0xff, 0, 0, 0xff})
+	p.SetColor(d.Color)
 	b := dst.Bounds()
 	r := ftraster.NewRasterizer(b.Dx(), b.Dy())
 	r.UseNonZeroWinding = true
