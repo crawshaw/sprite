@@ -28,7 +28,7 @@ var (
 	eng   = glsprite.Engine()
 	scene *sprite.Node
 
-	bounds     *box
+	bounds     *raster.Rectangle
 	curve      *quadraticBezier
 	c0, c1, c2 *raster.Circle
 	selected   *raster.Circle
@@ -61,7 +61,7 @@ func draw() {
 	curve.n0 = c0.Center
 	curve.n1 = c1.Center
 	curve.n2 = c2.Center
-	*bounds = box(curve.Path().Bounds())
+	*bounds = raster.Rectangle(curve.Path().Bounds())
 	log.Printf("curve: %v, bounds: %v", curve, *bounds)
 
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -135,7 +135,7 @@ func loadScene() {
 	}
 	scene.AppendChild(n)
 
-	bounds = new(box)
+	bounds = new(raster.Rectangle)
 	n = &sprite.Node{
 		Drawable: &raster.Drawable{
 			Shape: &raster.Stroke{
@@ -155,21 +155,5 @@ type quadraticBezier struct {
 func (q quadraticBezier) Path() (p raster.Path) {
 	p.AddStart(q.n0)
 	p.AddQuadratic(q.n1, q.n2)
-	return p
-}
-
-type box geom.Rectangle
-
-func (b *box) Path() (p raster.Path) {
-	topRight := b.Min
-	topRight.X = b.Max.X
-	bottomLeft := b.Min
-	bottomLeft.Y = b.Max.Y
-
-	p.AddStart(b.Min)
-	p.AddLine(topRight)
-	p.AddLine(b.Max)
-	p.AddLine(bottomLeft)
-	p.AddLine(b.Min)
 	return p
 }

@@ -246,6 +246,23 @@ func (c *Circle) Path() (p Path) {
 	return p
 }
 
+// TODO: rounded corners (i.e. css border-radius)?
+type Rectangle geom.Rectangle
+
+func (r *Rectangle) Path() (p Path) {
+	topRight := r.Min
+	topRight.X = r.Max.X
+	bottomLeft := r.Min
+	bottomLeft.Y = r.Max.Y
+
+	p.AddStart(r.Min)
+	p.AddLine(topRight)
+	p.AddLine(r.Max)
+	p.AddLine(bottomLeft)
+	p.AddLine(r.Min)
+	return p
+}
+
 // TODO
 type Ellipse struct {
 	Center geom.Point
