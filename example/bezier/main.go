@@ -5,18 +5,17 @@
 package main
 
 import (
-	"image/color"
-	"log"
 	"time"
 
-	"golang.org/x/junk/msprite/clock"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/app/debug"
 	"golang.org/x/mobile/event"
+	"golang.org/x/mobile/f32"
 	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/gl"
 
 	"github.com/crawshaw/sprite"
+	"github.com/crawshaw/sprite/clock"
 	"github.com/crawshaw/sprite/glsprite"
 	"github.com/crawshaw/sprite/raster"
 )
@@ -30,7 +29,7 @@ var (
 
 	bounds     *raster.Rectangle
 	curve      *quadraticBezier
-	c0, c1, c2 *raster.Circle
+	c0, c1, c2 *sprite.Node
 	selected   *raster.Circle
 )
 
@@ -58,11 +57,14 @@ func draw() {
 	}
 	lastClock = now
 
-	curve.n0 = c0.Center
-	curve.n1 = c1.Center
-	curve.n2 = c2.Center
-	*bounds = raster.Rectangle(curve.Path().Bounds())
-	log.Printf("curve: %v, bounds: %v", curve, *bounds)
+	/*
+		curve.n0 = c0.Center
+		curve.n1 = c1.Center
+		curve.n2 = c2.Center
+		*bounds = raster.Rectangle(curve.Path().Bounds())
+		log.Printf("curve: %v, bounds: %v", curve, *bounds)
+		log.Printf("geom W=%v, H=%v", geom.Width, geom.Height)
+	*/
 
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.Enable(gl.BLEND)
@@ -75,17 +77,19 @@ func draw() {
 func touch(t event.Touch) {
 	switch t.Type {
 	case event.TouchStart:
-		switch {
-		case c0.Contains(t.Loc):
-			selected = c0
-		case c1.Contains(t.Loc):
-			selected = c1
-		case c2.Contains(t.Loc):
-			selected = c2
-		}
+		/*
+			switch {
+			case c0.Contains(t.Loc):
+				selected = c0
+			case c1.Contains(t.Loc):
+				selected = c1
+			case c2.Contains(t.Loc):
+				selected = c2
+			}
+		*/
 	case event.TouchMove:
 		if selected != nil {
-			selected.Center = t.Loc
+			// TODO selected.Center = t.Loc
 		}
 	case event.TouchEnd:
 		selected = nil
@@ -94,58 +98,68 @@ func touch(t event.Touch) {
 
 func loadScene() {
 	scene = &sprite.Node{}
-	addCircle := func(c *raster.Circle) {
+
+	circleCurve, err := eng.LoadCurve((&raster.Stroke{
+		Shape: &raster.Circle{
+			Radius: 3,
+		},
+		Width: 0.5,
+	}).Path())
+	if err != nil {
+		panic(err)
+	}
+
+	addCircle := func(x, y geom.Pt) *sprite.Node {
+		n := &sprite.Node{
+			Transform: &f32.Affine{
+				{1, 0, float32(x)},
+				{0, 1, float32(y)},
+			},
+			Curve: circleCurve,
+			// TODO Color: color.RGBA{R: 0xff, A: 0xff},
+		}
+		scene.AppendChild(n)
+		return n
+	}
+
+	c0 = addCircle(10, 20)
+	c1 = addCircle(30, 10)
+	c2 = addCircle(50, 20)
+
+	curve = new(quadraticBezier)
+	curveNode := &sprite.Node{
+	// TODO: Color: color.Black
+	}
+	scene.AppendChild(curveNode)
+
+	/*
 		n := &sprite.Node{
 			Drawable: &raster.Drawable{
 				Shape: &raster.Stroke{
-					Shape: c,
-					Width: .5,
+					Shape: curve,
+					Width: .7,
 				},
-				Color: color.RGBA{R: 0xff, A: 0xff},
+				Color: color.Black,
 			},
 		}
 		scene.AppendChild(n)
-	}
-
-	c0 = &raster.Circle{
-		Center: geom.Point{10, 20},
-		Radius: 3,
-	}
-	addCircle(c0)
-	c1 = &raster.Circle{
-		Center: geom.Point{30, 10},
-		Radius: 3,
-	}
-	addCircle(c1)
-	c2 = &raster.Circle{
-		Center: geom.Point{50, 20},
-		Radius: 3,
-	}
-	addCircle(c2)
-
-	curve = new(quadraticBezier)
-	n := &sprite.Node{
-		Drawable: &raster.Drawable{
-			Shape: &raster.Stroke{
-				Shape: curve,
-				Width: .7,
-			},
-			Color: color.Black,
-		},
-	}
-	scene.AppendChild(n)
+	*/
 
 	bounds = new(raster.Rectangle)
-	n = &sprite.Node{
-		Drawable: &raster.Drawable{
-			Shape: &raster.Stroke{
-				Shape: bounds,
-				Width: .5,
+	//boundsNode := &sprite.Node{
+	// TODO Color: color.Gray{0xdd},
+	//}
+	/*
+		n := &sprite.Node{
+			Drawable: &raster.Drawable{
+				Shape: &raster.Stroke{
+					Shape: bounds,
+					Width: .5,
+				},
 			},
-			Color: color.Gray{0xdd},
-		},
-	}
-	scene.AppendChild(n)
+		}
+		scene.AppendChild(n)
+	*/
 }
 
 type quadraticBezier struct {

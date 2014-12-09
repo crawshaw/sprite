@@ -23,22 +23,22 @@ func (p *Path) Path() Path {
 
 // AddStart starts a new curve at the given point.
 func (p *Path) AddStart(a geom.Point) {
-	*p = append(*p, 0, a.X, a.Y, 0)
+	*p = append(*p, 0, a.X, a.Y)
 }
 
 // AddLine adds a linear segment to the current curve.
 func (p *Path) AddLine(b geom.Point) {
-	*p = append(*p, 1, b.X, b.Y, 1)
+	*p = append(*p, 1, b.X, b.Y)
 }
 
 // AddQuadratic adds a quadratic segment to the current curve.
 func (p *Path) AddQuadratic(b, c geom.Point) {
-	*p = append(*p, 2, b.X, b.Y, c.X, c.Y, 2)
+	*p = append(*p, 2, b.X, b.Y, c.X, c.Y)
 }
 
 // AddCubic adds a cubic segment to the current curve.
 func (p *Path) AddCubic(b, c, d geom.Point) {
-	*p = append(*p, 3, b.X, b.Y, c.X, c.Y, d.X, d.Y, 3)
+	*p = append(*p, 3, b.X, b.Y, c.X, c.Y, d.X, d.Y)
 }
 
 type Shape interface {
@@ -62,16 +62,16 @@ func pathToFix(dst ftraster.Adder, src Path) {
 		switch src[i] {
 		case 0:
 			dst.Start(pt(i + 1))
-			i += 4
+			i += 3
 		case 1:
 			dst.Add1(pt(i + 1))
-			i += 4
+			i += 3
 		case 2:
 			dst.Add2(pt(i+1), pt(i+3))
-			i += 6
+			i += 5
 		case 3:
 			dst.Add3(pt(i+1), pt(i+3), pt(i+5))
-			i += 8
+			i += 7
 		default:
 			panic(fmt.Sprintf("invalid path, src[%d]=%f", i, src[i]))
 		}
@@ -99,7 +99,7 @@ func fixToPath(src ftraster.Path) Path {
 			dst.AddCubic(pt(i+1), pt(i+3), pt(i+5))
 			i += 8
 		default:
-			panic(fmt.Sprintf("invalid path, src[%d]=%f", i, src[i]))
+			panic(fmt.Sprintf("invalid path, src[%d]=%v", i, src[i]))
 		}
 	}
 	return dst
@@ -170,14 +170,18 @@ func (s *Stroke) Path() Path {
 }
 
 type Circle struct {
-	Center geom.Point
+	//Center geom.Point
 	Radius geom.Pt
 }
 
 func (c *Circle) Contains(p geom.Point) bool {
-	x := p.X - c.Center.X
-	y := p.Y - c.Center.Y
-	return x*x+y*y < c.Radius*c.Radius
+	/*
+		TODO
+		x := p.X - c.Center.X
+		y := p.Y - c.Center.Y
+		return x*x+y*y < c.Radius*c.Radius
+	*/
+	return false
 }
 
 func (c *Circle) Path() (p Path) {
@@ -208,40 +212,43 @@ func (c *Circle) Path() (p Path) {
 	x1 := geom.Pt(math.Cos(math.Pi/4)) * c.Radius
 	x2 := geom.Pt(math.Tan(math.Pi/8)) * c.Radius
 
+	// TODO: find a rational foundation for this +1 business.
+	cx, cy := c.Radius+1, c.Radius+1
+
 	p.AddStart(
-		geom.Point{c.Center.X, c.Center.Y - c.Radius}, // N
+		geom.Point{cx, cy - c.Radius}, // N
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X + x2, c.Center.Y - c.Radius}, // N-NE
-		geom.Point{c.Center.X + x1, c.Center.Y - x1},       // NE
+		geom.Point{cx + x2, cy - c.Radius}, // N-NE
+		geom.Point{cx + x1, cy - x1},       // NE
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X + c.Radius, c.Center.Y - x2}, // NE-E
-		geom.Point{c.Center.X + c.Radius, c.Center.Y},      // E
+		geom.Point{cx + c.Radius, cy - x2}, // NE-E
+		geom.Point{cx + c.Radius, cy},      // E
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X + c.Radius, c.Center.Y + x2}, // E-SE
-		geom.Point{c.Center.X + x1, c.Center.Y + x1},       // SE
+		geom.Point{cx + c.Radius, cy + x2}, // E-SE
+		geom.Point{cx + x1, cy + x1},       // SE
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X + x2, c.Center.Y + c.Radius}, // SE-S
-		geom.Point{c.Center.X, c.Center.Y + c.Radius},      // S
+		geom.Point{cx + x2, cy + c.Radius}, // SE-S
+		geom.Point{cx, cy + c.Radius},      // S
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X - x2, c.Center.Y + c.Radius}, // S-SW
-		geom.Point{c.Center.X - x1, c.Center.Y + x1},       // SW
+		geom.Point{cx - x2, cy + c.Radius}, // S-SW
+		geom.Point{cx - x1, cy + x1},       // SW
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X - c.Radius, c.Center.Y + x2}, // SW-W
-		geom.Point{c.Center.X - c.Radius, c.Center.Y},      // W
+		geom.Point{cx - c.Radius, cy + x2}, // SW-W
+		geom.Point{cx - c.Radius, cy},      // W
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X - c.Radius, c.Center.Y - x2}, // W-NW
-		geom.Point{c.Center.X - x1, c.Center.Y - x1},       // NW
+		geom.Point{cx - c.Radius, cy - x2}, // W-NW
+		geom.Point{cx - x1, cy - x1},       // NW
 	)
 	p.AddQuadratic(
-		geom.Point{c.Center.X - x2, c.Center.Y - c.Radius}, // NW-N
-		geom.Point{c.Center.X, c.Center.Y - c.Radius},      // N
+		geom.Point{cx - x2, cy - c.Radius}, // NW-N
+		geom.Point{cx, cy - c.Radius},      // N
 	)
 	return p
 }
@@ -261,12 +268,6 @@ func (r *Rectangle) Path() (p Path) {
 	p.AddLine(bottomLeft)
 	p.AddLine(r.Min)
 	return p
-}
-
-// TODO
-type Ellipse struct {
-	Center geom.Point
-	Radius geom.Point
 }
 
 type Drawable struct {

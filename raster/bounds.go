@@ -35,7 +35,7 @@ func (p Path) Bounds() geom.Rectangle {
 		case 0, 1:
 			end := geom.Point{p[1], p[2]}
 			start = end
-			p = p[4:]
+			p = p[3:]
 		case 2:
 			n0 := geom.Point{p[1], p[2]}
 			end := geom.Point{p[3], p[4]}
@@ -43,7 +43,7 @@ func (p Path) Bounds() geom.Rectangle {
 				include(b)
 			}
 			start = end
-			p = p[6:]
+			p = p[5:]
 		case 3:
 			n0 := geom.Point{p[1], p[2]}
 			n1 := geom.Point{p[3], p[4]}
@@ -52,7 +52,7 @@ func (p Path) Bounds() geom.Rectangle {
 				include(b)
 			}
 			start = end
-			p = p[8:]
+			p = p[7:]
 		default:
 			panic(fmt.Sprintf("raster: unexpected path segment type: %f", p[0]))
 		}
@@ -113,5 +113,6 @@ func extremitiesCubic(n0, n1, n2, n3 geom.Point) [6]geom.Point {
 	//
 	//	B'(t) = 3*(1-t)^2*(n1-n0) + 6*(1-t)*t*(n2-n1) + 3*t^2*(n3-n2)
 	//	B''(t) = 6*(1-t)*(n2-2*n1+n0) + 6*t*(n3 - 2*n2 + n1)
-	panic("bounds for cubics are not implemented")
+	return [6]geom.Point{}
+	//panic("bounds for cubics are not implemented")
 }

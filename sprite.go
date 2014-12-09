@@ -28,10 +28,9 @@ import (
 	"image"
 	"image/draw"
 
-	"golang.org/x/mobile/f32"
-
 	"github.com/crawshaw/sprite/clock"
-	"github.com/crawshaw/sprite/raster"
+	"golang.org/x/mobile/f32"
+	"golang.org/x/mobile/geom"
 )
 
 type Arranger interface {
@@ -50,8 +49,30 @@ type SubTex struct {
 	R image.Rectangle
 }
 
+type Curve int32
+
 type Engine interface {
+	// LoadTexture loads a texture into the active Engine.
 	LoadTexture(a image.Image) (Texture, error)
+
+	// LoadPath loads a vector path into the active Engine.
+	//
+	// The path slice is an encoded sequence of tagged bezier
+	// curve control points. Control points are geom.Pt co-ordinates.
+	//  The first control point of a curve is the final control point
+	// of the previous curve.
+	//
+	// Valid tags:
+	//	{0, x, y}           - start control point
+	//	{1, x, y}           - line segment control point
+	//	{2, x1, y1, x2, y2} - quadratic segment control points
+	//
+	// TODO(crawshaw): support cubic segments
+	// TODO(crawshaw): make []float32?
+	LoadCurve(path []geom.Pt) (Curve, error)
+
+	UnloadCurve(c Curve)
+
 	Render(scene *Node, t clock.Time)
 }
 
@@ -67,12 +88,12 @@ type Node struct {
 	//
 	// If Transform is nil then no extra transformation is applied
 	// to SubTex, and a transform representing the screen is
-	// applied to Drawable.
+	// applied to Vector.
 	Transform *f32.Affine
 
 	Arranger Arranger
 	SubTex   SubTex
-	Drawable *raster.Drawable
+	Curve    Curve
 }
 
 // AppendChild adds a node c as a child of n.

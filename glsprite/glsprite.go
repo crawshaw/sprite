@@ -8,6 +8,7 @@ package glsprite
 import (
 	"image"
 	"image/draw"
+	"log"
 
 	"golang.org/x/mobile/f32"
 	"golang.org/x/mobile/geom"
@@ -39,12 +40,21 @@ func (t *texture) Unload() {
 }
 
 func Engine() sprite.Engine {
-	return &engine{}
+	return &engine{
+		curves:      make(map[sprite.Curve]raster.Path),
+		curveBounds: make(map[sprite.Curve]*f32.Affine),
+		nextCurve:   1,
+	}
 }
 
 type engine struct {
 	raster        *glutil.Image
+	rasterCache   *raster.Cache
 	absTransforms []f32.Affine
+
+	curves      map[sprite.Curve]raster.Path
+	curveBounds map[sprite.Curve]*f32.Affine
+	nextCurve   int32
 }
 
 func (e *engine) LoadTexture(src image.Image) (sprite.Texture, error) {
@@ -53,6 +63,45 @@ func (e *engine) LoadTexture(src image.Image) (sprite.Texture, error) {
 	t.Upload(b, src)
 	// TODO: set "glImage.Pix = nil"?? We don't need the CPU-side image any more.
 	return t, nil
+}
+
+func (e *engine) LoadCurve(path []geom.Pt) (sprite.Curve, error) {
+	id := sprite.Curve(e.nextCurve)
+	e.nextCurve++
+	e.curves[id] = raster.Path(path)
+
+	if e.raster == nil {
+		// TODO: round up to power of two.
+		// TODO: screen size is a proxy for sensible amount of memory
+		// to spend. determine a better bound.
+		w := int(geom.Width.Px()+0.5) * 2
+		h := int(geom.Height.Px()+0.5) * 2
+		e.raster = glutil.NewImage(w, h)
+		e.rasterCache = &raster.Cache{M: e.raster.RGBA}
+	}
+	// TODO there is no need to render curves now, it can be done lazily
+	// so we can have far more loaded than we have seaparate texture space
+	// for. But this gives us a nice way to propagate errors until the
+	// cache is properly built.
+	log.Printf("LoadCurve: path=%v", path)
+	_, err := e.rasterCache.Get(id, path, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	b := raster.Path(path).Bounds()
+	w := b.Max.X - b.Min.X
+	h := b.Max.Y - b.Min.Y
+	e.curveBounds[id] = &f32.Affine{
+		{float32(w), 0, float32(b.Min.X)},
+		{0, float32(h), float32(b.Min.Y)},
+	}
+	return id, nil
+}
+
+func (e *engine) UnloadCurve(c sprite.Curve) {
+	delete(e.curves, c)
+	delete(e.curveBounds, c)
 }
 
 func (e *engine) Render(scene *sprite.Node, t clock.Time) {
@@ -93,30 +142,22 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 		)
 	}
 
-	if n.Drawable != nil {
-		if n.Transform == nil {
-			// Give ourselves the space of the screen for drawing.
-			// TODO: use smaller bounding box.
-			m.Mul(&m, &f32.Affine{
-				{float32(geom.Width), 0, 0},
-				{0, float32(geom.Height), 0},
-			})
+	if n.Curve != 0 {
+		m.Mul(&m, e.curveBounds[n.Curve])
+
+		b, err := e.rasterCache.Get(n.Curve, e.curves[n.Curve], 0)
+		if err != nil {
+			panic(err)
 		}
-		if e.raster == nil {
-			w := int(geom.Width.Px() + 0.5)
-			h := int(geom.Height.Px() + 0.5)
-			e.raster = glutil.NewImage(w, h)
+		if e.rasterCache.Dirty {
+			// given the current cache design this should never happen
+			// TODO: when it does happen deliberately, delay e.raster.Draw
+			// calls so they are executed in batches with a single Upload.
+			log.Println("upload raster on draw")
+			e.raster.Upload()
+			e.rasterCache.Dirty = false
 		}
-		w := int(geom.Pt(m[0][0]).Px() + 0.5)
-		h := int(geom.Pt(m[1][1]).Px() + 0.5)
-		b := image.Rect(0, 0, w, h)
-		scratch := e.raster.RGBA.SubImage(b).(*image.RGBA)
-		clear := scratch.Pix[0:scratch.PixOffset(w, h)]
-		for i := range clear {
-			clear[i] = 0
-		}
-		raster.Draw(scratch, n.Drawable)
-		e.raster.Upload()
+
 		e.raster.Draw(
 			geom.Point{
 				geom.Pt(m[0][2]),
