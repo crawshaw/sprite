@@ -85,10 +85,6 @@ type Node struct {
 
 	// Transform is an affine transformation matrix for this
 	// node and its children.
-	//
-	// If Transform is nil then no extra transformation is applied
-	// to SubTex, and a transform representing the screen is
-	// applied to Vector.
 	Transform *f32.Affine
 
 	Arranger Arranger

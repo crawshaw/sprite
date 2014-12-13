@@ -99,23 +99,32 @@ func touch(t event.Touch) {
 func loadScene() {
 	scene = &sprite.Node{}
 
-	circleCurve, err := eng.LoadCurve((&raster.Stroke{
+	circlePath := (&raster.Stroke{
 		Shape: &raster.Circle{
 			Radius: 3,
 		},
 		Width: 0.5,
-	}).Path())
+	}).Path()
+	// TODO put somewhere.
+	b := circlePath.Bounds()
+	w := b.Max.X - b.Min.X
+	h := b.Max.Y - b.Min.Y
+	circleAffine := f32.Affine{
+		{float32(w), 0, float32(b.Min.X)},
+		{0, float32(h), float32(b.Min.Y)},
+	}
+	circleCurve, err := eng.LoadCurve(circlePath)
 	if err != nil {
 		panic(err)
 	}
 
 	addCircle := func(x, y geom.Pt) *sprite.Node {
+		t := circleAffine
+		t[0][2] += float32(x)
+		t[1][2] += float32(y)
 		n := &sprite.Node{
-			Transform: &f32.Affine{
-				{1, 0, float32(x)},
-				{0, 1, float32(y)},
-			},
-			Curve: circleCurve,
+			Transform: &t,
+			Curve:     circleCurve,
 			// TODO Color: color.RGBA{R: 0xff, A: 0xff},
 		}
 		scene.AppendChild(n)

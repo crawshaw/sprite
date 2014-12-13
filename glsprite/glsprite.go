@@ -41,9 +41,8 @@ func (t *texture) Unload() {
 
 func Engine() sprite.Engine {
 	return &engine{
-		curves:      make(map[sprite.Curve]raster.Path),
-		curveBounds: make(map[sprite.Curve]*f32.Affine),
-		nextCurve:   1,
+		curves:    make(map[sprite.Curve]raster.Path),
+		nextCurve: 1,
 	}
 }
 
@@ -52,9 +51,8 @@ type engine struct {
 	rasterCache   *raster.Cache
 	absTransforms []f32.Affine
 
-	curves      map[sprite.Curve]raster.Path
-	curveBounds map[sprite.Curve]*f32.Affine
-	nextCurve   int32
+	curves    map[sprite.Curve]raster.Path
+	nextCurve int32
 }
 
 func (e *engine) LoadTexture(src image.Image) (sprite.Texture, error) {
@@ -88,20 +86,11 @@ func (e *engine) LoadCurve(path []geom.Pt) (sprite.Curve, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	b := raster.Path(path).Bounds()
-	w := b.Max.X - b.Min.X
-	h := b.Max.Y - b.Min.Y
-	e.curveBounds[id] = &f32.Affine{
-		{float32(w), 0, float32(b.Min.X)},
-		{0, float32(h), float32(b.Min.Y)},
-	}
 	return id, nil
 }
 
 func (e *engine) UnloadCurve(c sprite.Curve) {
 	delete(e.curves, c)
-	delete(e.curveBounds, c)
 }
 
 func (e *engine) Render(scene *sprite.Node, t clock.Time) {
@@ -143,8 +132,6 @@ func (e *engine) render(n *sprite.Node, t clock.Time) {
 	}
 
 	if n.Curve != 0 {
-		m.Mul(&m, e.curveBounds[n.Curve])
-
 		b, err := e.rasterCache.Get(n.Curve, e.curves[n.Curve], 0)
 		if err != nil {
 			panic(err)

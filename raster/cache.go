@@ -145,12 +145,5 @@ func (c *Cache) rasterize(entry *cacheEntry, t clock.Time) error {
 		m.Pix[i] = 0
 	}
 	Draw(m, &Drawable{&entry.path, color.Black})
-	/*
-		entry.texture = sprite.SubTex{
-			T: c.s.s,
-			R: image.Rect(p.X, p.Y, p.X+w, p.Y+h),
-		}
-		c.s.s.Upload(entry.texture.R, a)
-	*/
 	return nil
 }
