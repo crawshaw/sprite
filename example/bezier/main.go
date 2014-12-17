@@ -46,15 +46,6 @@ func draw() {
 	}
 
 	now := clock.Time(time.Since(start) * 60 / time.Second)
-	if now == lastClock {
-		// TODO: figure out how to limit draw callbacks to 60Hz instead of
-		// burning the CPU as fast as possible.
-		// TODO: (relatedly??) sync to vblank?
-		return
-	}
-	if last := time.Duration(now-lastClock) * time.Second / 60; last > 20*time.Millisecond {
-		//log.Printf("last = %v", last)
-	}
 	lastClock = now
 
 	/*

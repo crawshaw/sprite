@@ -144,6 +144,6 @@ func (c *Cache) rasterize(entry *cacheEntry, t clock.Time) error {
 	for i := range m.Pix {
 		m.Pix[i] = 0
 	}
-	Draw(m, &Drawable{&entry.path, color.Black})
+	Draw(m, image.NewUniform(color.Black), entry.path)
 	return nil
 }

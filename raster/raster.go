@@ -275,14 +275,62 @@ type Drawable struct {
 	Color color.Color // TODO mask? so many possibilities
 }
 
+type painter struct {
+	dst *image.RGBA
+	src image.Image
+}
+
+func (r *painter) Paint(spans []ftraster.Span, done bool) {
+	b := r.dst.Bounds()
+	for _, s := range spans {
+		if s.Y < b.Min.Y {
+			continue
+		}
+		if s.Y >= b.Max.Y {
+			return
+		}
+		if s.X0 < b.Min.X {
+			s.X0 = b.Min.X
+		}
+		if s.X1 > b.Max.X {
+			s.X1 = b.Max.X
+		}
+		if s.X0 >= s.X1 {
+			continue
+		}
+		// See $GOROOT/pkg/image/draw/draw.go drawCopyOver
+		i0 := (s.Y-r.dst.Rect.Min.Y)*r.dst.Stride + (s.X0-r.dst.Rect.Min.X)*4
+		i1 := i0 + (s.X1-s.X0)*4
+		for i := i0; i < i1; i += 4 {
+			sr, sg, sb, sa := r.src.At(s.Y, s.X0+(i-i0)/4).RGBA()
+
+			dr := uint32(r.dst.Pix[i+0])
+			dg := uint32(r.dst.Pix[i+1])
+			db := uint32(r.dst.Pix[i+2])
+			da := uint32(r.dst.Pix[i+3])
+
+			// TODO all wrong
+			const m = 1<<16 - 1
+			ma := uint32(1)
+			ca := uint32(1)
+			a := (m - (ca * ma / m)) * 0x101
+			r.dst.Pix[i+0] = uint8((dr*a/m + sr) >> 8)
+			r.dst.Pix[i+1] = uint8((dg*a/m + sg) >> 8)
+			r.dst.Pix[i+2] = uint8((db*a/m + sb) >> 8)
+			r.dst.Pix[i+3] = uint8((da*a/m + sa) >> 8)
+		}
+
+	}
+}
+
 // Draw is a portable implementation of vector rasterization.
-func Draw(dst *image.RGBA, d *Drawable) {
-	p := ftraster.NewRGBAPainter(dst)
-	p.SetColor(d.Color)
+func Draw(dst *image.RGBA, src image.Image, path Path) {
+	//d *Drawable) {
+	p := &painter{dst, src}
 	b := dst.Bounds()
 	r := ftraster.NewRasterizer(b.Dx(), b.Dy())
 	r.UseNonZeroWinding = true
 
-	pathToFix(r, d.Shape.Path())
+	pathToFix(r, path)
 	r.Rasterize(p)
 }
